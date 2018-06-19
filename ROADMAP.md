@@ -1,0 +1,4 @@
+- log file in XDG
+- config file in XDG
+  - configurable keys
+- togglable help bar that shows keys
