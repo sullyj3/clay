@@ -82,10 +82,7 @@ eventHandler state (VtyEvent ev) =
       (V.EvKey V.KRight _)              -> handleRight state
       (V.EvKey (V.KChar '.') [V.MMeta]) -> continue $ toggleShowHidden state
       (V.EvKey k _)
-         | isFilterKey k -> continue =<< handleEventLensed state
-                                                           filterEditor
-                                                           Ed.handleEditorEvent
-                                                           ev
+         | isFilterKey k -> handleFiltering state ev
          | isListKey   k -> continue =<< handleEventLensed state
                                                            fileList
                                                            BL.handleListEvent
@@ -94,6 +91,12 @@ eventHandler state (VtyEvent ev) =
         () <- liftIO $ hPutStrLn stderr $ "unhandled VtyEvent: " ++ show ev
         halt state
 eventHandler state _event = continue state
+
+handleFiltering :: AppState -> V.Event -> EventM ResName (Next AppState)
+handleFiltering state ev = continue =<< handleEventLensed state
+                                                          filterEditor
+                                                          Ed.handleEditorEvent
+                                                          ev
 
 handleLeft :: AppState -> EventM ResName (Next AppState)
 handleLeft state = continue =<< liftIO (goUp state)
