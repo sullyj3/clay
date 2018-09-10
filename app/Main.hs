@@ -4,11 +4,15 @@
 module Main where
 
 import qualified Data.Vector as Vec
+import qualified Data.Text as Txt
+import Data.String (fromString)
+import Data.List (isPrefixOf)
 
 import System.FilePath (takeFileName)
 import System.Directory
-import System.IO
+-- import System.IO
 import Control.Monad.IO.Class
+import qualified Control.Logging as Log
 
 import Lens.Micro.TH
 import Lens.Micro
@@ -20,7 +24,7 @@ import Lens.Micro
 --
 import Brick
 import qualified Brick.Widgets.Edit as Ed
-import qualified Brick.Widgets.List as BL (handleListEvent, listSelectedElement)
+import qualified Brick.Widgets.List as BL
 -- import qualified Brick.Focus as Foc
 import qualified Graphics.Vty as V
 
@@ -49,6 +53,12 @@ data CWDState = CWDState
 makeLenses ''AppState
 makeLenses ''CWDState
 
+-- TODO - causes resource busy exception
+appendLog :: Txt.Text -> IO ()
+appendLog = Log.withFileLogging logFile . Log.log'
+  where
+    logFile = "/home/james/Code/haskell/clay/clay.log"
+
 -- header widget containing the current working directory
 currPathHeader :: FilePath -> Widget ResName
 currPathHeader = withAttr "highlight" . padRight Max . str
@@ -75,7 +85,7 @@ isListKey _k        = False
 eventHandler :: AppState -> BrickEvent ResName () -> EventM ResName (Next AppState)
 eventHandler state (VtyEvent ev) =
   do
-    () <- liftIO $ hPutStrLn stderr $ "handling " ++ show ev
+    () <- liftIO $ appendLog $ "handling " <> fromString (show ev)
     case ev of
       (V.EvKey V.KEsc _)                -> halt        state
       (V.EvKey V.KLeft _)               -> handleLeft  state
@@ -88,15 +98,27 @@ eventHandler state (VtyEvent ev) =
                                                            BL.handleListEvent
                                                            ev
       _ -> do
-        () <- liftIO $ hPutStrLn stderr $ "unhandled VtyEvent: " ++ show ev
+        () <- liftIO $ appendLog $ "unhandled VtyEvent: " <> fromString (show ev)
         halt state
 eventHandler state _event = continue state
 
 handleFiltering :: AppState -> V.Event -> EventM ResName (Next AppState)
-handleFiltering state ev = continue =<< handleEventLensed state
-                                                          filterEditor
-                                                          Ed.handleEditorEvent
-                                                          ev
+handleFiltering state ev = 
+  do -- update filterEditor contents using brick stock editor handler
+     state' <- handleEventLensed state filterEditor Ed.handleEditorEvent ev
+
+     -- update filelist contents based on filtereditor contents
+     let filterStr = show $ Txt.unwords $ Ed.getEditContents (state ^. filterEditor)
+     let fileVec' = case filterStr of
+                         []     -> (state' ^. cwdState . filesCWD)
+                         _      -> Vec.filter (filterStr `isPrefixOf`)
+                                              (state' ^. cwdState . filesCWD)
+     let fileList' = FL.updateFileList
+                       (state' ^. showHidden)
+                       fileVec'
+                       (state' ^. fileList)
+
+     continue $ state' { _fileList = fileList' }
 
 handleLeft :: AppState -> EventM ResName (Next AppState)
 handleLeft state = continue =<< liftIO (goUp state)
