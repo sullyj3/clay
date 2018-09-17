@@ -68,13 +68,13 @@ draw state = [root]
 
 isFilterKey :: V.Key -> Bool
 isFilterKey (V.KChar _c)  = True
-isFilterKey (V.KBS)       = True
+isFilterKey  V.KBS        = True
 isFilterKey _k            = False
 
 isListKey :: V.Key -> Bool
-isListKey (V.KUp)   = True
-isListKey (V.KDown) = True
-isListKey _k        = False
+isListKey V.KUp   = True
+isListKey V.KDown = True
+isListKey _k      = False
 
 eventHandler :: AppState -> BrickEvent ResName () -> EventM ResName (Next AppState)
 eventHandler state (VtyEvent ev) =
@@ -104,7 +104,7 @@ handleFiltering state ev =
      -- update filelist contents based on filtereditor contents
      let filterStr = show $ Txt.unwords $ Ed.getEditContents (state ^. filterEditor)
      let fileVec' = case filterStr of
-                         []     -> (state' ^. cwdState . filesCWD)
+                         []     -> state' ^. cwdState . filesCWD
                          _      -> Vec.filter (filterStr `isPrefixOf`)
                                               (state' ^. cwdState . filesCWD)
      let fileList' = FL.updateFileList
@@ -132,7 +132,7 @@ handleRight state = do
 toggleShowHidden :: AppState -> AppState
 toggleShowHidden s =
   let showHidden' = not $ s ^. showHidden
-      fileList'   = (FL.updateFileList showHidden' (s ^. cwdState . filesCWD) (s ^. fileList))
+      fileList'   = FL.updateFileList showHidden' (s ^. cwdState . filesCWD) (s ^. fileList)
   in
     s { _showHidden = showHidden', _fileList = fileList' }
 
@@ -168,7 +168,7 @@ goUp s = do
   let prevPath = takeFileName $ s ^. (cwdState . cwd)
   s' <- cd ".." s
 
-  return $ s' & fileList %~ (FL.selectPath prevPath)
+  return $ s' & fileList %~ FL.selectPath prevPath
 
 getCWDState :: IO CWDState
 getCWDState = do
