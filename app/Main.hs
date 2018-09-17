@@ -193,7 +193,9 @@ makeInitialState = do
                     , _fileList = fileList_
                     }
 
-main :: IO AppState
+main :: IO ()
 main = Log.withFileLogging "/home/james/Code/haskell/clay/clay.log" $ do 
+  Log.log "Clay launched!\n"
   initialState <- makeInitialState
   defaultMain myApp initialState
+  Log.log "Exiting."
