@@ -5,6 +5,7 @@ module Main where
 
 import qualified Data.Vector as Vec
 import qualified Data.Text as Txt
+import qualified Control.Logging as Log
 import Data.String (fromString)
 import Data.List (isPrefixOf)
 
@@ -12,7 +13,6 @@ import System.FilePath (takeFileName)
 import System.Directory
 -- import System.IO
 import Control.Monad.IO.Class
-import qualified Control.Logging as Log
 
 import Lens.Micro.TH
 import Lens.Micro
@@ -53,12 +53,6 @@ data CWDState = CWDState
 makeLenses ''AppState
 makeLenses ''CWDState
 
--- TODO - causes resource busy exception
-appendLog :: Txt.Text -> IO ()
-appendLog = Log.withFileLogging logFile . Log.log'
-  where
-    logFile = "/home/james/Code/haskell/clay/clay.log"
-
 -- header widget containing the current working directory
 currPathHeader :: FilePath -> Widget ResName
 currPathHeader = withAttr "highlight" . padRight Max . str
@@ -85,7 +79,7 @@ isListKey _k        = False
 eventHandler :: AppState -> BrickEvent ResName () -> EventM ResName (Next AppState)
 eventHandler state (VtyEvent ev) =
   do
-    () <- liftIO $ appendLog $ "handling " <> fromString (show ev)
+    () <- liftIO $ Log.log $ "handling " <> fromString (show ev)
     case ev of
       (V.EvKey V.KEsc _)                -> halt        state
       (V.EvKey V.KLeft _)               -> handleLeft  state
@@ -98,7 +92,7 @@ eventHandler state (VtyEvent ev) =
                                                            BL.handleListEvent
                                                            ev
       _ -> do
-        () <- liftIO $ appendLog $ "unhandled VtyEvent: " <> fromString (show ev)
+        () <- liftIO $ Log.log $ "unhandled VtyEvent: " <> fromString (show ev)
         halt state
 eventHandler state _event = continue state
 
@@ -200,6 +194,6 @@ makeInitialState = do
                     }
 
 main :: IO AppState
-main = do
+main = Log.withFileLogging "/home/james/Code/haskell/clay/clay.log" $ do 
   initialState <- makeInitialState
   defaultMain myApp initialState
