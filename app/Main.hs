@@ -79,7 +79,7 @@ isListKey _k      = False
 eventHandler :: AppState -> BrickEvent ResName () -> EventM ResName (Next AppState)
 eventHandler state (VtyEvent ev) =
   do
-    () <- liftIO $ Log.log $ "handling " <> fromString (show ev)
+    liftIO $ Log.log $ "handling " <> fromString (show ev)
     case ev of
       (V.EvKey V.KEsc _)                -> halt        state
       (V.EvKey V.KLeft _)               -> handleLeft  state
@@ -92,21 +92,25 @@ eventHandler state (VtyEvent ev) =
                                                            BL.handleListEvent
                                                            ev
       _ -> do
-        () <- liftIO $ Log.log $ "unhandled VtyEvent: " <> fromString (show ev)
+        liftIO $ Log.log $ "unhandled VtyEvent: " <> fromString (show ev)
         halt state
 eventHandler state _event = continue state
 
 handleFiltering :: AppState -> V.Event -> EventM ResName (Next AppState)
-handleFiltering state ev = 
+handleFiltering state ev =
   do -- update filterEditor contents using brick stock editor handler
      state' <- handleEventLensed state filterEditor Ed.handleEditorEvent ev
+     liftIO $ Log.log $ "FilterEditor contents is " <> mconcat ( Ed.getEditContents $ state' ^. filterEditor) 
 
      -- update filelist contents based on filtereditor contents
-     let filterStr = show $ Txt.unwords $ Ed.getEditContents (state ^. filterEditor)
+     let filterStr = show $ Txt.unwords $ Ed.getEditContents (state' ^. filterEditor)
+     liftIO $ Log.log $ "filterStr is " <> fromString filterStr
+     liftIO $ Log.log $ fromString $ "filesCWD is " <> show (state' ^. cwdState . filesCWD)
      let fileVec' = case filterStr of
-                         []     -> state' ^. cwdState . filesCWD
+                         ""     -> state' ^. cwdState . filesCWD
                          _      -> Vec.filter (filterStr `isPrefixOf`)
                                               (state' ^. cwdState . filesCWD)
+     liftIO $ Log.log $ fromString $ "fileVec' is " <> show fileVec'
      let fileList' = FL.updateFileList
                        (state' ^. showHidden)
                        fileVec'
@@ -195,7 +199,7 @@ makeInitialState = do
 
 main :: IO ()
 main = Log.withFileLogging "/home/james/Code/haskell/clay/clay.log" $ do 
-  Log.log "Clay launched!\n"
+  Log.log "Clay launched!"
   initialState <- makeInitialState
   defaultMain myApp initialState
-  Log.log "Exiting."
+  Log.log "Exiting.\n"
