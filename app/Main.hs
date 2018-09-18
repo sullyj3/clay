@@ -3,6 +3,8 @@
 
 module Main where
 
+import Debug.Trace (trace)
+
 import qualified Data.Vector as Vec
 import qualified Data.Text as Txt
 import qualified Control.Logging as Log
@@ -107,8 +109,8 @@ handleFiltering state ev =
      liftIO $ Log.log $ "filterStr is " <> fromString filterStr
      liftIO $ Log.log $ fromString $ "filesCWD is " <> show (state' ^. cwdState . filesCWD)
      let fileVec' = case filterStr of
-                         ""     -> state' ^. cwdState . filesCWD
-                         _      -> Vec.filter (filterStr `isPrefixOf`)
+                         ""     -> trace "1" $ state' ^. cwdState . filesCWD
+                         _      -> trace "2" $ Vec.filter (filterStr `isPrefixOf`)
                                               (state' ^. cwdState . filesCWD)
      liftIO $ Log.log $ fromString $ "fileVec' is " <> show fileVec'
      let fileList' = FL.updateFileList
