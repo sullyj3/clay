@@ -1,5 +1,5 @@
 # Clay
 
-A toy file browser
+A half baked file browser
 
 
