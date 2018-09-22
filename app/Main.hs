@@ -109,12 +109,8 @@ handleFiltering state ev =
                          ""     -> state' ^. cwdState . filesCWD
                          -- @hack: converting to text and back. Everything should be text
                          _      -> Vec.filter (\s -> filterStr `isPrefixOf` (Txt.unpack . Txt.toCaseFold . Txt.pack) s) (state' ^. cwdState . filesCWD)
-     let fileList' = FL.updateFileList
-                       (state' ^. showHidden)
-                       fileVec'
-                       (state' ^. fileList)
 
-     continue $ state' { _fileList = fileList' }
+     continue $ state' & fileList %~ FL.updateFileList (state' ^. showHidden) fileVec'
 
 handleLeft :: AppState -> EventM ResName (Next AppState)
 handleLeft state = continue =<< liftIO (goUp state)
