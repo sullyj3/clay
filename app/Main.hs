@@ -102,17 +102,13 @@ handleFiltering :: AppState -> V.Event -> EventM ResName (Next AppState)
 handleFiltering state ev =
   do -- update filterEditor contents using brick stock editor handler
      state' <- handleEventLensed state filterEditor Ed.handleEditorEvent ev
-     liftIO $ Log.log $ "FilterEditor contents is " <> mconcat ( Ed.getEditContents $ state' ^. filterEditor) 
 
      -- update filelist contents based on filtereditor contents
-     let filterStr = show $ Txt.unwords $ Ed.getEditContents (state' ^. filterEditor)
-     liftIO $ Log.log $ "filterStr is " <> fromString filterStr
-     liftIO $ Log.log $ fromString $ "filesCWD is " <> show (state' ^. cwdState . filesCWD)
+     let filterStr = Txt.unpack $ Txt.unwords $ Ed.getEditContents (state' ^. filterEditor)
      let fileVec' = case filterStr of
-                         ""     -> trace "1" $ state' ^. cwdState . filesCWD
-                         _      -> trace "2" $ Vec.filter (filterStr `isPrefixOf`)
+                         ""     -> state' ^. cwdState . filesCWD
+                         _      -> Vec.filter (filterStr `isPrefixOf`)
                                               (state' ^. cwdState . filesCWD)
-     liftIO $ Log.log $ fromString $ "fileVec' is " <> show fileVec'
      let fileList' = FL.updateFileList
                        (state' ^. showHidden)
                        fileVec'
