@@ -103,12 +103,12 @@ handleFiltering state ev =
   do -- update filterEditor contents using brick stock editor handler
      state' <- handleEventLensed state filterEditor Ed.handleEditorEvent ev
 
-     -- update filelist contents based on filtereditor contents
-     let filterStr = Txt.unpack $ Txt.unwords $ Ed.getEditContents (state' ^. filterEditor)
+     -- update filelist contents based on filtereditor contents, matching case insensitively
+     let filterStr = Txt.unpack . Txt.toCaseFold . Txt.unwords $ Ed.getEditContents (state' ^. filterEditor)
      let fileVec' = case filterStr of
                          ""     -> state' ^. cwdState . filesCWD
-                         _      -> Vec.filter (filterStr `isPrefixOf`)
-                                              (state' ^. cwdState . filesCWD)
+                         -- @hack: converting to text and back. Everything should be text
+                         _      -> Vec.filter (\s -> filterStr `isPrefixOf` (Txt.unpack . Txt.toCaseFold . Txt.pack) s) (state' ^. cwdState . filesCWD)
      let fileList' = FL.updateFileList
                        (state' ^. showHidden)
                        fileVec'
