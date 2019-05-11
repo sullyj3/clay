@@ -13,6 +13,7 @@ import Data.List (isPrefixOf)
 
 import System.FilePath (takeFileName)
 import System.Directory
+import System.Process (callCommand)
 -- import System.IO
 import Control.Monad.IO.Class
 
@@ -25,6 +26,7 @@ import Lens.Micro
 -- (.~) set (sideways ~ for set)
 --
 import Brick
+import Brick.Main (suspendAndResume)
 import qualified Brick.Widgets.Edit as Ed
 import qualified Brick.Widgets.List as BL
 -- import qualified Brick.Focus as Foc
@@ -138,7 +140,12 @@ handleRight state = do
       isDir <- liftIO $ doesDirectoryExist fp
       if isDir
         then continue =<< liftIO (cd fp state)
-        else continue state
+        else suspendAndResume $ callExternal ("rifle " <> fp) state
+
+callExternal :: String -> AppState -> IO AppState
+callExternal com state = do
+  callCommand com
+  return state
 
 toggleShowHidden :: AppState -> AppState
 toggleShowHidden s =

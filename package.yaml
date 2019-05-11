@@ -27,6 +27,7 @@ dependencies:
 - logging
 - microlens
 - microlens-th
+- process
 - text
 - vector
 - vty
