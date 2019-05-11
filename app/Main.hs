@@ -8,7 +8,7 @@ import Debug.Trace (trace)
 import qualified Data.Vector as Vec
 import qualified Data.Text as Txt
 import qualified Control.Logging as Log
-import Data.String (fromString)
+import Data.String (fromString, IsString)
 import Data.List (isPrefixOf)
 
 import System.FilePath (takeFileName)
@@ -68,35 +68,49 @@ draw state = [root]
                 , FL.renderFileList     True (state ^. fileList)
                 ]
 
-isFilterKey :: V.Key -> Bool
-isFilterKey (V.KChar _c)  = True
-isFilterKey  V.KBS        = True
-isFilterKey _k            = False
-
-isListKey :: V.Key -> Bool
-isListKey V.KUp   = True
-isListKey V.KDown = True
-isListKey _k      = False
 
 eventHandler :: AppState -> BrickEvent ResName () -> EventM ResName (Next AppState)
 eventHandler state (VtyEvent ev) =
   do
     liftIO $ Log.log $ "handling " <> fromString (show ev)
     case ev of
-      (V.EvKey V.KEsc _)                -> halt        state
-      (V.EvKey V.KLeft _)               -> handleLeft  state
-      (V.EvKey V.KRight _)              -> handleRight state
-      (V.EvKey (V.KChar '.') [V.MMeta]) -> continue $ toggleShowHidden state
-      (V.EvKey k _)
-         | isFilterKey k -> handleFiltering state ev
-         | isListKey   k -> continue =<< handleEventLensed state
-                                                           fileList
-                                                           BL.handleListEvent
-                                                           ev
+      (V.EvKey _ _)                -> handleKey ev state
       _ -> do
-        liftIO $ Log.log $ "unhandled VtyEvent: " <> fromString (show ev)
+        liftIO $ Log.log $ "unhandled VtyEvent: " <> txtShow ev
         halt state
 eventHandler state _event = continue state
+
+handleKey :: V.Event -> AppState -> EventM ResName (Next AppState)
+handleKey ek state = case ek of
+  (V.EvKey V.KEsc _)                -> halt        state
+  (V.EvKey V.KLeft _)               -> handleLeft  state
+  (V.EvKey V.KRight _)              -> handleRight state
+  (V.EvKey (V.KChar '.') [V.MMeta]) -> continue $ toggleShowHidden state
+  (V.EvKey k mods)
+     | isFilterKey k -> handleFiltering state ek
+     | isListKey   k -> continue =<< handleEventLensed state
+                                                       fileList
+                                                       BL.handleListEvent
+                                                       ek
+     | otherwise     -> logAndContinue state $ "Unhandled key" <> txtShow (k, mods)
+  where
+    isFilterKey :: V.Key -> Bool
+    isFilterKey (V.KChar _c)  = True
+    isFilterKey  V.KBS        = True
+    isFilterKey _k            = False
+
+    isListKey :: V.Key -> Bool
+    isListKey V.KUp   = True
+    isListKey V.KDown = True
+    isListKey _k      = False
+
+txtShow :: (IsString s, Show a) => a -> s
+txtShow = fromString . show
+
+logAndContinue :: AppState -> Txt.Text -> EventM ResName (Next AppState)
+logAndContinue state msg = do
+  liftIO $ Log.log msg
+  continue state
 
 handleFiltering :: AppState -> V.Event -> EventM ResName (Next AppState)
 handleFiltering state ev =
