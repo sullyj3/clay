@@ -70,15 +70,14 @@ draw state = [root]
 
 
 eventHandler :: AppState -> BrickEvent ResName () -> EventM ResName (Next AppState)
-eventHandler state (VtyEvent ev) =
-  do
-    liftIO $ Log.log $ "handling " <> fromString (show ev)
-    case ev of
-      (V.EvKey _ _)                -> handleKey ev state
-      _ -> do
-        liftIO $ Log.log $ "unhandled VtyEvent: " <> txtShow ev
-        halt state
-eventHandler state _event = continue state
+eventHandler state (VtyEvent ev) = do
+  liftIO $ Log.log ("handling " <> fromString (show ev))
+  case ev of
+    (V.EvKey _ _) -> handleKey ev state
+    _             -> do
+      liftIO $ Log.log ("unhandled VtyEvent: " <> txtShow ev)
+      halt state
+eventHandler state _ev = continue state
 
 handleKey :: V.Event -> AppState -> EventM ResName (Next AppState)
 handleKey ek state = case ek of
